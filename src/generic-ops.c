@@ -22,6 +22,8 @@
 #include "std.h"
 #include "hiscoa-common.h"
 #include "hiscoa-compress.h"
+#include "scoa-compress.h"
+#include "scoa-common.h"
 #include "capt-command.h"
 #include "capt-status.h"
 #include "printer.h"
@@ -38,6 +40,31 @@ size_t ops_compress_band_hiscoa(struct printer_state_s *state,
 }
 
 void ops_send_band_hiscoa(struct printer_state_s *state, const void *data, size_t size)
+{
+	const uint8_t *pdata = (const uint8_t *) data;
+	while (size) {
+		size_t send = 0xFF00;
+		if (send > size)
+			send = size;
+		state->isend += 1;
+		if (state->isend % 16 == 0)
+			capt_wait_ready();
+		capt_send(CAPT_PRINT_DATA, pdata, send);
+		pdata += send;
+		size -= send;
+	}
+}
+
+size_t ops_compress_band_scoa(struct printer_state_s *state,
+		void *band, size_t size,
+		const void *pixels, unsigned line_size, unsigned num_lines)
+{
+	(void) state;
+	return scoa_compress_band(band, size, pixels, line_size, num_lines,
+					0, &scoa_default_params);
+}
+
+void ops_send_band_scoa(struct printer_state_s *state, const void *data, size_t size)
 {
 	const uint8_t *pdata = (const uint8_t *) data;
 	while (size) {

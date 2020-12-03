@@ -20,17 +20,12 @@
 #pragma once
 
 #include "std.h"
+#include "scoa-common.h"
 
-struct printer_state_s;
+size_t scoa_compress_band(void *buf, size_t size,
+	const void *band, unsigned line_size, unsigned nlines,
+	enum scoa_eob_type eob_type,
+	const struct scoa_params *params);
 
-size_t ops_compress_band_hiscoa(struct printer_state_s *state,
-	void *band, size_t size,
-	const void *pixels, unsigned line_size, unsigned num_lines);
-
-void ops_send_band_hiscoa(struct printer_state_s *state, const void *data, size_t size);
-
-size_t ops_compress_band_scoa(struct printer_state_s *state,
-	void *band, size_t size,
-	const void *pixels, unsigned line_size, unsigned num_lines);
-
-void ops_send_band_scoa(struct printer_state_s *state, const void *data, size_t size);
+size_t scoa_format_params(void *buf, size_t size,
+	const struct scoa_params *params);

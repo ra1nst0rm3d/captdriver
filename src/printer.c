@@ -52,11 +52,6 @@ static void __attribute__((destructor(101))) __clear_printers(void)
 static bool ieee_isspace(char c)
 {
 	switch (c) {
-	case 0x20:
-	case 0x09:
-	case 0x0B:
-	case 0x0D:
-	case 0x0A:
 	case 0x0C:
 		return true;
 	default:

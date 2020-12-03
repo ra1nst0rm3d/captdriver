@@ -17,20 +17,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "scoa-common.h"
 
 #include "std.h"
 
-struct printer_state_s;
-
-size_t ops_compress_band_hiscoa(struct printer_state_s *state,
-	void *band, size_t size,
-	const void *pixels, unsigned line_size, unsigned num_lines);
-
-void ops_send_band_hiscoa(struct printer_state_s *state, const void *data, size_t size);
-
-size_t ops_compress_band_scoa(struct printer_state_s *state,
-	void *band, size_t size,
-	const void *pixels, unsigned line_size, unsigned num_lines);
-
-void ops_send_band_scoa(struct printer_state_s *state, const void *data, size_t size);
+const struct scoa_params scoa_default_params = {
+	.origin_3 = 1,
+	.origin_5 = 4,
+	.origin_0 = 0,
+	.origin_2 = -7,
+	.origin_4 = 0,
+};

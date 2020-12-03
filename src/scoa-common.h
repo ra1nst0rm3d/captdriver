@@ -21,16 +21,17 @@
 
 #include "std.h"
 
-struct printer_state_s;
+enum scoa_eob_type {
+	SCOA_EOB_NORMAL = 0x0,
+	SCOA_EOB_LAST = 0x01,
+};
 
-size_t ops_compress_band_hiscoa(struct printer_state_s *state,
-	void *band, size_t size,
-	const void *pixels, unsigned line_size, unsigned num_lines);
+struct scoa_params {
+	int origin_3;
+	int origin_5;
+	int origin_0;
+	int origin_2;
+	int origin_4;
+};
 
-void ops_send_band_hiscoa(struct printer_state_s *state, const void *data, size_t size);
-
-size_t ops_compress_band_scoa(struct printer_state_s *state,
-	void *band, size_t size,
-	const void *pixels, unsigned line_size, unsigned num_lines);
-
-void ops_send_band_scoa(struct printer_state_s *state, const void *data, size_t size);
+extern const struct scoa_params scoa_default_params;
