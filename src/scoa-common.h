@@ -25,13 +25,3 @@ enum scoa_eob_type {
 	SCOA_EOB_NORMAL = 0x0,
 	SCOA_EOB_LAST = 0x01,
 };
-
-struct scoa_params {
-	int origin_3;
-	int origin_5;
-	int origin_0;
-	int origin_2;
-	int origin_4;
-};
-
-extern const struct scoa_params scoa_default_params;

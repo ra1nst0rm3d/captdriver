@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Alexey Galakhov <agalakhov@gmail.com>
+ * Copyright (C) 2020 Oleg Sazonov <whitylmn@gmail.com>
  *
  * Licensed under the GNU General Public License Version 3
  *
@@ -16,15 +16,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+#pragma once
+#include <stdint.h>
 
-#include "scoa-common.h"
 
-#include "std.h"
+static const uint8_t magicbuf_0[] = {
+	0x00, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00
+};
 
-const struct scoa_params scoa_default_params = {
-	.origin_3 = 1,
-	.origin_5 = 4,
-	.origin_0 = 0,
-	.origin_2 = -7,
-	.origin_4 = 0,
+static const uint8_t magicbuf_2[] = {
+	0xEE, 0xDB, 0xEA, 0xAD, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t blinkonbuf[] = {
+        /* led */ 0x31, 0x00, 0x00, /* S6 */ 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* S7 */ 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+};
+
+static const uint8_t blinkoffbuf[] = {
+        /* led */ 0x13, 0x00, 0x00, /* S6 */ 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* S7 */ 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
 };

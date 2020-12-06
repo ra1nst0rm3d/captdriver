@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2013 Alexey Galakhov <agalakhov@gmail.com>
- * Copyright (C) 2016 Alexei Gordeev <KP1533TM2@gmail.com>
+ * Copyright (C) 2020 Oleg Sazonov <whitylmn@gmail.com>
  *
  * Licensed under the GNU General Public License Version 3
  *
@@ -18,13 +17,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "std.h"
+ #include "std.h"
 #include "word.h"
 #include "capt-command.h"
 #include "capt-status.h"
 #include "generic-ops.h"
-#include "hiscoa-common.h"
-#include "hiscoa-compress.h"
+#include "scoa-common.h"
+#include "scoa-compress.h"
 #include "paper.h"
 #include "printer.h"
 #include "magic.h"
@@ -37,22 +36,22 @@
 
 uint16_t job;
 
-struct lbp2900_ops_s {
+struct lbp1120_ops_s {
 	struct printer_ops_s ops;
 
 	const struct capt_status_s * (*get_status) (void);
 	void (*wait_ready) (void);
 };
 
-static const struct capt_status_s *lbp2900_get_status(const struct printer_ops_s *ops)
+static const struct capt_status_s *lbp1120_get_status(const struct printer_ops_s *ops)
 {
-	const struct lbp2900_ops_s *lops = container_of(ops, struct lbp2900_ops_s, ops);
+	const struct lbp1120_ops_s *lops = container_of(ops, struct lbp1120_ops_s, ops);
 	return lops->get_status();
 }
 
-static void lbp2900_wait_ready(const struct printer_ops_s *ops)
+static void lbp1120_wait_ready(const struct printer_ops_s *ops)
 {
-	const struct lbp2900_ops_s *lops = container_of(ops, struct lbp2900_ops_s, ops);
+	const struct lbp1120_ops_s *lops = container_of(ops, struct lbp1120_ops_s, ops);
 	lops->wait_ready();
 }
 
@@ -79,8 +78,7 @@ static void send_job_start(uint8_t fg, uint16_t page)
 	capt_sendrecv(CAPT_JOB_SETUP, buf, sizeof(buf), NULL, 0);
 }
 
-
-static void lbp2900_job_prologue(struct printer_state_s *state)
+static void lbp1120_job_prologue(struct printer_state_s *state)
 {
 	(void) state;
 	uint8_t buf[8];
@@ -89,49 +87,18 @@ static void lbp2900_job_prologue(struct printer_state_s *state)
 	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
 	sleep(1);
 	capt_init_status();
-	lbp2900_get_status(state->ops);
+	lbp1120_get_status(state->ops);
 
 	capt_sendrecv(CAPT_START_0, NULL, 0, NULL, 0);
 	capt_sendrecv(CAPT_JOB_BEGIN, magicbuf_0, ARRAY_SIZE(magicbuf_0), buf, &size);
 	job=WORD(buf[2], buf[3]);
 
-	capt_sendrecv(CAPT_GPIO, blinkoffbuf, ARRAY_SIZE(blinkoffbuf), NULL, 0);
-	lbp2900_wait_ready(state->ops);
+	lbp1120_wait_ready(state->ops);
 
 	send_job_start(1, 0);
-	lbp2900_wait_ready(state->ops);
+	lbp1120_wait_ready(state->ops);
 }
-
-static void lbp3000_job_prologue(struct printer_state_s *state)
-{
-	(void) state;
-	uint8_t buf[8];
-	size_t size;
-
-	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
-	sleep(1);
-	capt_init_status();
-	lbp2900_get_status(state->ops);
-
-	capt_sendrecv(CAPT_START_0, NULL, 0, NULL, 0);
-	capt_sendrecv(CAPT_JOB_BEGIN, magicbuf_0, ARRAY_SIZE(magicbuf_0), buf, &size); 
-	job=WORD(buf[2], buf[3]); 
-
-	/* LBP-3000 prints the very first printjob perfectly
-	 * and then proceeds to hang at this (commented out)
-	 * spot. That's the difference, or so it seems. */
-/*	lbp2900_wait_ready(state->ops);	*/
-	send_job_start(1, 0);
-	
-	/* There's also that command, that apparently does something, and does something, 
-	 * but it's there in the Wireshark logs. Response data == command data. */
-	uint8_t dummy[2] = {0, 0};
-	capt_sendrecv(0xE0A6, dummy, sizeof(dummy), NULL, 0);
-	
-	lbp2900_wait_ready(state->ops);
-}
-
-static bool lbp2900_page_prologue(struct printer_state_s *state, const struct page_dims_s *dims)
+static bool lbp1120_page_prologue(struct printer_state_s *state, const struct page_dims_s *dims)
 {
 	const struct capt_status_s *status;
 	size_t s;
@@ -190,33 +157,31 @@ static bool lbp2900_page_prologue(struct printer_state_s *state, const struct pa
 
 	(void) state;
 
-	status = lbp2900_get_status(state->ops);
+	status = lbp1120_get_status(state->ops);
 	if (FLAG(status, CAPT_FL_UNINIT1) || FLAG(status, CAPT_FL_UNINIT2)) {
 		capt_sendrecv(CAPT_START_1, NULL, 0, NULL, 0);
 		capt_sendrecv(CAPT_START_2, NULL, 0, NULL, 0);
 		capt_sendrecv(CAPT_START_3, NULL, 0, NULL, 0);
 
 		/* FIXME: wait for printer is free (could it be potentially dangerous or really mandatory?) */
-		while ( ! FLAG(lbp2900_get_status(state->ops), ((4 << 16) | (1 << 0)) ) )
+		while ( ! FLAG(lbp1120_get_status(state->ops), ((4 << 16) | (1 << 0)) ) )
 		  sleep(1);
-		lbp2900_get_status(state->ops);
+		lbp1120_get_status(state->ops);
 
 
-		lbp2900_wait_ready(state->ops);
+		lbp1120_wait_ready(state->ops);
 		capt_sendrecv(CAPT_UPLOAD_2, magicbuf_2, ARRAY_SIZE(magicbuf_2), NULL, 0);
-		lbp2900_wait_ready(state->ops);
+		lbp1120_wait_ready(state->ops);
 	}
 
 	while (1) {
-		if (! FLAG(lbp2900_get_status(state->ops), CAPT_FL_BUFFERFULL))
+		if (! FLAG(lbp1120_get_status(state->ops), CAPT_FL_BUFFERFULL))
 			break;
 		sleep(1);
 	}
 
 	capt_multi_begin(CAPT_SET_PARMS);
 	capt_multi_add(CAPT_SET_PARM_PAGE, pageparms, sizeof(pageparms));
-	s = hiscoa_format_params(buf, sizeof(buf), &hiscoa_default_params);
-	capt_multi_add(CAPT_SET_PARM_HISCOA, buf, s);
 	capt_multi_add(CAPT_SET_PARM_1, NULL, 0);
 	capt_multi_add(CAPT_SET_PARM_2, NULL, 0);
 	capt_multi_send();
@@ -224,7 +189,7 @@ static bool lbp2900_page_prologue(struct printer_state_s *state, const struct pa
 	return true;
 }
 
-static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct page_dims_s *dims)
+static bool lbp1120_page_epilogue(struct printer_state_s *state, const struct page_dims_s *dims)
 {
 	(void) dims;
 	const struct capt_status_s *status;
@@ -234,21 +199,21 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 	/* waiting until the page is received */
 	while (1) {
 	  sleep(1);
-	  status = lbp2900_get_status(state->ops);
+	  status = lbp1120_get_status(state->ops);
 	  if (status->page_received == status->page_decoding)
 	    break;
 	}
 	send_job_start(2, status->page_decoding);
-	lbp2900_wait_ready(state->ops);
+	lbp1120_wait_ready(state->ops);
 
 	uint8_t buf[2] = { LO(status->page_decoding), HI(status->page_decoding) };
 	capt_sendrecv(CAPT_FIRE, buf, 2, NULL, 0);
-	lbp2900_wait_ready(state->ops);
+	lbp1120_wait_ready(state->ops);
 
 	send_job_start(6, status->page_decoding);
 
 	while (1) {
-		const struct capt_status_s *status = lbp2900_get_status(state->ops);
+		const struct capt_status_s *status = lbp1120_get_status(state->ops);
 		/* Interesting. Using page_printing here results in shifted print */
 		if (status->page_out == status->page_decoding)
 			return true;
@@ -262,20 +227,7 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 	}
 }
 
-static void lbp2900_job_epilogue(struct printer_state_s *state)
-{
-	uint8_t jbuf[2] = { LO(job), HI(job) };
-
-	while (1) {
-		const struct capt_status_s *status = lbp2900_get_status(state->ops);
-		if (status->page_completed == status->page_decoding)
-			break;
-		sleep(1);
-	}
-	capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
-}
-
-static void lbp2900_page_setup(struct printer_state_s *state,
+static void lbp1120_page_setup(struct printer_state_s *state,
 		struct page_dims_s *dims,
 		unsigned width, unsigned height)
 { 
@@ -289,15 +241,15 @@ static void lbp2900_page_setup(struct printer_state_s *state,
 	dims->band_size = 70;
 }
 
-static void lbp2900_wait_user(struct printer_state_s *state)
+static void lbp1120_wait_user(struct printer_state_s *state)
 {
 	(void) state;
 
 	capt_sendrecv(CAPT_GPIO, blinkonbuf, ARRAY_SIZE(blinkonbuf), NULL, 0);
-	lbp2900_wait_ready(state->ops);
+	lbp1120_wait_ready(state->ops);
 
 	while (1) {
-		const struct capt_status_s *status = lbp2900_get_status(state->ops);
+		const struct capt_status_s *status = lbp1120_get_status(state->ops);
 		if (FLAG(status, CAPT_FL_BUTTON)) {
 			fprintf(stderr, "DEBUG: CAPT: button pressed\n");
 //			break;
@@ -310,55 +262,33 @@ static void lbp2900_wait_user(struct printer_state_s *state)
 	}
 
 	capt_sendrecv(CAPT_GPIO, blinkoffbuf, ARRAY_SIZE(blinkoffbuf), NULL, 0);
-	lbp2900_wait_ready(state->ops);
+	lbp1120_wait_ready(state->ops);
 }
+static void lbp1120_job_epilogue(struct printer_state_s *state)
+{
+	uint8_t jbuf[2] = { LO(job), HI(job) };
 
-static struct lbp2900_ops_s lbp2900_ops = {
+	while (1) {
+		const struct capt_status_s *status = lbp1120_get_status(state->ops);
+		if (status->page_completed == status->page_decoding)
+			break;
+		sleep(1);
+	}
+	capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
+}
+static struct lbp1120_ops_s lbp1120_ops = {
 	.ops = {
-		.job_prologue = lbp2900_job_prologue,
-		.job_epilogue = lbp2900_job_epilogue,
-		.page_setup = lbp2900_page_setup,
-		.page_prologue = lbp2900_page_prologue,
-		.page_epilogue = lbp2900_page_epilogue,
-		.compress_band = ops_compress_band_hiscoa,
-		.send_band = ops_send_band_hiscoa,
-		.wait_user = lbp2900_wait_user,
-	},
-	.get_status = capt_get_xstatus,
-	.wait_ready = capt_wait_ready,
-};
-
-static struct lbp2900_ops_s lbp3000_ops = {
-	.ops = {
-		.job_prologue = lbp3000_job_prologue,	/* different job prologue */
-		.job_epilogue = lbp2900_job_epilogue,
-		.page_setup = lbp2900_page_setup,
-		.page_prologue = lbp2900_page_prologue,
-		.page_epilogue = lbp2900_page_epilogue,
-		.compress_band = ops_compress_band_hiscoa,
-		.send_band = ops_send_band_hiscoa,
-		.wait_user = lbp2900_wait_user,
-	},
-	.get_status = capt_get_xstatus,
-	.wait_ready = capt_wait_ready,
-};
-
-register_printer("LBP2900", lbp2900_ops.ops, WORKS);
-register_printer("LBP3000", lbp3000_ops.ops, EXPERIMENTAL);
-
-static struct lbp2900_ops_s lbp3010_ops = {
-	.ops = {
-		.job_prologue = lbp2900_job_prologue,
-		.job_epilogue = lbp2900_job_epilogue,
-		.page_setup = lbp2900_page_setup,
-		.page_prologue = lbp2900_page_prologue,
-		.page_epilogue = lbp2900_page_epilogue,
-		.compress_band = ops_compress_band_hiscoa,
-		.send_band = ops_send_band_hiscoa,
-		.wait_user = lbp2900_wait_user,
+		.job_prologue = lbp1120_job_prologue,
+		.job_epilogue = lbp1120_job_epilogue,
+		.page_setup = lbp1120_page_setup,
+		.page_prologue = lbp1120_page_prologue,
+		.page_epilogue = lbp1120_page_epilogue,
+		.compress_band = ops_compress_band_scoa,
+		.send_band = ops_send_band_scoa,
+		.wait_user = lbp1120_wait_user,
 	},
 	.get_status = capt_get_xstatus_only,
 	.wait_ready = capt_wait_xready_only,
 };
 
-register_printer("LBP3010/LBP3018/LBP3050", lbp3010_ops.ops, EXPERIMENTAL);
+register_printer("LBP1120", lbp1120_ops.ops, BROKEN); // NOW BROKEN

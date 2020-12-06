@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Alexey Galakhov <agalakhov@gmail.com>
+ * Copyright (C) 2020 Oleg Sazonov <whitylmn@gmail.com>
  *
  * Licensed under the GNU General Public License Version 3
  *
@@ -24,8 +24,8 @@
 
 size_t scoa_compress_band(void *buf, size_t size,
 	const void *band, unsigned line_size, unsigned nlines,
-	enum scoa_eob_type eob_type,
-	const struct scoa_params *params);
+	enum scoa_eob_type eob_type
+	/*const struct scoa_params *params*/);
 
 size_t scoa_format_params(void *buf, size_t size,
 	const struct scoa_params *params);
