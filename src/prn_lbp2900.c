@@ -35,7 +35,6 @@
 #include <time.h>
 #include <unistd.h>
 
-uint16_t job;
 
 struct lbp2900_ops_s {
 	struct printer_ops_s ops;

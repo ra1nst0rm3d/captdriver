@@ -34,7 +34,7 @@
 #include <time.h>
 #include <unistd.h>
 
-uint16_t job;
+
 
 struct lbp1120_ops_s {
 	struct printer_ops_s ops;
@@ -101,8 +101,6 @@ static void lbp1120_job_prologue(struct printer_state_s *state)
 static bool lbp1120_page_prologue(struct printer_state_s *state, const struct page_dims_s *dims)
 {
 	const struct capt_status_s *status;
-	size_t s;
-	uint8_t buf[16];
 
 	uint8_t save = dims->toner_save;
 	uint8_t fm = 0x00; /* fuser mode (temperature?) */
@@ -291,4 +289,4 @@ static struct lbp1120_ops_s lbp1120_ops = {
 	.wait_ready = capt_wait_xready_only,
 };
 
-register_printer("LBP1120", lbp1120_ops.ops, BROKEN); // NOW BROKEN
+register_printer("LASER SHOT LBP-1120", lbp1120_ops.ops, EXPERIMENTAL); // NOW BROKEN

@@ -49,7 +49,7 @@ static void __attribute__((destructor(101))) __clear_printers(void)
 	}
 }
 
-static bool ieee_isspace(char c)
+static bool isspace(char c)
 {
 	switch (c) {
 	case 0x0C:
@@ -117,10 +117,10 @@ const struct printer_ops_s *printer_detect(void)
 	const char *end;
 	ieee = capt_identify();
 	pos = ieee;
-	for (; *pos && ieee_isspace(*pos); ++pos)
+	for (; *pos && isspace(*pos); ++pos)
 		;
 	end = pos + strlen(pos);
-	for (; end != ieee && ieee_isspace(*(end - 1)); --end)
+	for (; end != ieee && isspace(*(end - 1)); --end)
 		;
 
 	while (pos != end) {

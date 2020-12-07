@@ -54,7 +54,6 @@ enum capt_command {
 	CAPT_GPIO       = 0xE1A2,
 };
 
-
 const char *capt_identify(void);
 
 void capt_send(uint16_t cmd, const void *data, size_t size);

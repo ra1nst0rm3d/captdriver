@@ -24,8 +24,5 @@
 
 size_t scoa_compress_band(void *buf, size_t size,
 	const void *band, unsigned line_size, unsigned nlines,
-	enum scoa_eob_type eob_type
-	/*const struct scoa_params *params*/);
+	enum scoa_eob_type eob_type);
 
-size_t scoa_format_params(void *buf, size_t size,
-	const struct scoa_params *params);

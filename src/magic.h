@@ -19,6 +19,8 @@
 #pragma once
 #include <stdint.h>
 
+static uint16_t job;
+
 
 static const uint8_t magicbuf_0[] = {
 	0x00, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00

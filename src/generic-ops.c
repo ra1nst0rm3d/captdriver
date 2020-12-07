@@ -61,7 +61,7 @@ size_t ops_compress_band_scoa(struct printer_state_s *state,
 {
 	(void) state;
 	return scoa_compress_band(band, size, pixels, line_size, num_lines,
-					0, &scoa_default_params);
+					0);
 }
 
 void ops_send_band_scoa(struct printer_state_s *state, const void *data, size_t size)

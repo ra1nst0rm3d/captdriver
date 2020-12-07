@@ -145,23 +145,3 @@ size_t scoa_compress_band(void *buf, size_t size,
 
 	return state.bytepos;
 }
-
-
-/*size_t scoa_format_params(void *buf, size_t size, const struct hiscoa_params *params)
-{
-	uint8_t b[8] = {
-		(uint8_t) (int8_t) params->origin_3,
-		(uint8_t) (int8_t) params->origin_5,
-		0x01,
-		0x01,
-		(uint8_t) (int8_t) params->origin_0,
-		(uint8_t) (int8_t) params->origin_2,
-		LO((uint16_t) (int16_t) params->origin_4),
-		HI((uint16_t) (int16_t) params->origin_4),
-	};
-
-	if (size < sizeof(b))
-		return 0;
-	memcpy(buf, b, sizeof(b));
-	return sizeof(b);
-}*/
