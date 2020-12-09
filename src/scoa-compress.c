@@ -42,7 +42,7 @@ struct state {
 	uint8_t bytes[16];
 };
 
-inline void push_bits(struct state *state, uint8_t byte)
+inline void push_byte(struct state *state, uint8_t byte)
 {
 		state->output_buf[state->bytepos++] = byte;
 }
@@ -75,36 +75,27 @@ static void write_simple_byte(struct state *state)
 	unsigned i;
 	uint8_t byte = state->input_buf[state->input_pos];
 
-	if (state->nbytes < 16)
-		state->nbytes += 1;
-	for (i = state->nbytes - 1; i > 0; --i)
-		state->bytes[i] = state->bytes[i - 1];
-	state->bytes[0] = byte;
-
-	if (byte == 0) {
-		push_bits(state, 0xFD); /* zero */
-	} else {
-		//push_bits(state, 0x08 | byte, 12); /* byte */
-		push_bits(state, 0xa0 | (byte >> 3));
-		push_bits(state, 0xc0 | ((byte & 0x07) << 3));
-	}
+	push_byte(state, 0xa0 | (byte >> 3));
+	push_byte(state, 0xc0 | ((byte & 0x07) << 3));
 	state->input_pos += 1;
 }
 
 static bool try_write_byterepeat(struct state *state)
 {
-	unsigned i;
-	for (i = 0; i < state->nbytes; ++i) {
-		uint8_t byte = state->input_buf[state->input_pos];
-		if (byte == state->bytes[i]) {
-			unsigned j;
-			for (j = i; j > 0; --j)
-				state->bytes[j] = state->bytes[j - 1];
-			state->bytes[0] = byte;
-			//push_bits(state, 0x20 | ((15 - i) & 0xF), 6);
-            push_bits(state, 0x80  | (i & 0x07) << 3);
-			state->input_pos += 1;
-			return true;
+	
+	uint8_t byte = state->input_buf[state->input_pos];
+	unsigned short rep = 0;
+	if(state->input_buf[state->input_pos+1] == byte) {
+		state->input_pos++;
+		for(unsigned i = 1; i <= 8; i++) {
+			if(state->input_buf[state->input_pos+1] == byte) {
+				rep++;
+				state->input_pos++;
+			} else {
+				push_byte(state, byte);
+				push_byte(state, 0x80 | (rep & 0x07) << 3);
+				return true;
+			}
 		}
 	}
 	return false;
@@ -138,8 +129,8 @@ size_t scoa_compress_band(void *buf, size_t size,
 		write_simple_byte(&state);
 	}
 
-	push_bits(&state, 0xFE); /* end */
-	push_bits(&state, (unsigned) eob_type);
+	push_byte(&state, 0xFE); /* end */
+	push_byte(&state, (unsigned) eob_type);
 	//if (state.bitpos % 32)
 	//	push_bits(&state, 0xFFFFFFFF, 32 - (state.bitpos % 32));
 
