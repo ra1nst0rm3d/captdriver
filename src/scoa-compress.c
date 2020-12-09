@@ -92,8 +92,8 @@ static bool try_write_byterepeat(struct state *state)
 				rep++;
 				state->input_pos++;
 			} else {
-				push_byte(state, byte);
 				push_byte(state, 0x80 | (rep & 0x07) << 3);
+				push_byte(state, byte);
 				return true;
 			}
 		}
@@ -131,8 +131,6 @@ size_t scoa_compress_band(void *buf, size_t size,
 
 	push_byte(&state, 0xFE); /* end */
 	push_byte(&state, (unsigned) eob_type);
-	//if (state.bitpos % 32)
-	//	push_bits(&state, 0xFFFFFFFF, 32 - (state.bitpos % 32));
 
 	return state.bytepos;
 }
