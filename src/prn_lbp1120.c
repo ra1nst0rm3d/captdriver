@@ -88,15 +88,20 @@ static void lbp1120_job_prologue(struct printer_state_s *state)
 	sleep(1);
 	capt_init_status();
 	lbp1120_get_status(state->ops);
-
-	capt_sendrecv(CAPT_START_0, NULL, 0, NULL, 0);
-	capt_sendrecv(CAPT_JOB_BEGIN, magicbuf_0, ARRAY_SIZE(magicbuf_0), buf, &size);
-	job=WORD(buf[2], buf[3]);
-
+	//capt_sendrecv(CAPT_START_0, NULL, 0, NULL, 0);
+	capt_send(CAPT_JOB_BEGIN, NULL, 0);
+	//job=WORD(buf[2], buf[3]);
+	lbp1120_get_status(state->ops);
+	capt_send(CAPT_CHKJOBSTAT, NULL, 0);
+	//lbp1120_get_status(state->ops);
+	capt_send(CAPT_START_3, NULL, 0);
+	capt_sendrecv(CAPT_UPLOAD_2, magicbuf_2, ARRAY_SIZE(magicbuf_2), NULL, 0);
+	lbp1120_get_status(state->ops);
+	capt_send(CAPT_NOP, NULL, 0);
+	capt_send(CAPT_CHKJOBSTAT, NULL, 0);
 	lbp1120_wait_ready(state->ops);
-
-	send_job_start(1, 0);
-	lbp1120_wait_ready(state->ops);
+	//send_job_start(1, 0);
+	//lbp1120_wait_ready(state->ops);
 }
 static bool lbp1120_page_prologue(struct printer_state_s *state, const struct page_dims_s *dims)
 {
@@ -155,22 +160,16 @@ static bool lbp1120_page_prologue(struct printer_state_s *state, const struct pa
 
 	(void) state;
 
-	status = lbp1120_get_status(state->ops);
-	if (FLAG(status, CAPT_FL_UNINIT1) || FLAG(status, CAPT_FL_UNINIT2)) {
-		capt_sendrecv(CAPT_START_1, NULL, 0, NULL, 0);
-		capt_sendrecv(CAPT_START_2, NULL, 0, NULL, 0);
-		capt_sendrecv(CAPT_START_3, NULL, 0, NULL, 0);
-
-		/* FIXME: wait for printer is free (could it be potentially dangerous or really mandatory?) */
-		while ( ! FLAG(lbp1120_get_status(state->ops), ((4 << 16) | (1 << 0)) ) )
-		  sleep(1);
+	lbp1120_get_status(state->ops);
+		//capt_sendrecv(CAPT_START_1, NULL, 0, NULL, 0);
+		//capt_sendrecv(CAPT_START_2, NULL, 0, NULL, 0);
+		//capt_sendrecv(CAPT_START_3, NULL, 0, NULL, 0);
 		lbp1120_get_status(state->ops);
 
 
+		//lbp1120_wait_ready(state->ops);
+		
 		lbp1120_wait_ready(state->ops);
-		capt_sendrecv(CAPT_UPLOAD_2, magicbuf_2, ARRAY_SIZE(magicbuf_2), NULL, 0);
-		lbp1120_wait_ready(state->ops);
-	}
 
 	while (1) {
 		if (! FLAG(lbp1120_get_status(state->ops), CAPT_FL_BUFFERFULL))
@@ -178,11 +177,13 @@ static bool lbp1120_page_prologue(struct printer_state_s *state, const struct pa
 		sleep(1);
 	}
 
-	capt_multi_begin(CAPT_SET_PARMS);
-	capt_multi_add(CAPT_SET_PARM_PAGE, pageparms, sizeof(pageparms));
-	capt_multi_add(CAPT_SET_PARM_1, NULL, 0);
-	capt_multi_add(CAPT_SET_PARM_2, NULL, 0);
-	capt_multi_send();
+	capt_send(CAPT_SET_PARM_PAGE, pageparms, sizeof(pageparms));
+	capt_send(CAPT_SET_PARM_1, NULL, 0);
+	lbp1120_get_status(state->ops);
+	capt_send(CAPT_NOP, NULL, 0);
+	capt_send(CAPT_IEEE_IDENT, NULL, 0);
+	//capt_multi_add(CAPT_SET_PARM_2, NULL, 0);
+	//capt_multi_send();
 
 	return true;
 }
@@ -201,14 +202,14 @@ static bool lbp1120_page_epilogue(struct printer_state_s *state, const struct pa
 	  if (status->page_received == status->page_decoding)
 	    break;
 	}
-	send_job_start(2, status->page_decoding);
+	//send_job_start(2, status->page_decoding);
 	lbp1120_wait_ready(state->ops);
 
 	uint8_t buf[2] = { LO(status->page_decoding), HI(status->page_decoding) };
 	capt_sendrecv(CAPT_FIRE, buf, 2, NULL, 0);
 	lbp1120_wait_ready(state->ops);
 
-	send_job_start(6, status->page_decoding);
+	//send_job_start(6, status->page_decoding);
 
 	while (1) {
 		const struct capt_status_s *status = lbp1120_get_status(state->ops);
@@ -264,7 +265,7 @@ static void lbp1120_wait_user(struct printer_state_s *state)
 }
 static void lbp1120_job_epilogue(struct printer_state_s *state)
 {
-	uint8_t jbuf[2] = { LO(job), HI(job) };
+	//uint8_t jbuf[2] = { LO(job), HI(job) };
 
 	while (1) {
 		const struct capt_status_s *status = lbp1120_get_status(state->ops);
@@ -272,7 +273,7 @@ static void lbp1120_job_epilogue(struct printer_state_s *state)
 			break;
 		sleep(1);
 	}
-	capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
+	//capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
 }
 static struct lbp1120_ops_s lbp1120_ops = {
 	.ops = {
@@ -285,8 +286,8 @@ static struct lbp1120_ops_s lbp1120_ops = {
 		.send_band = ops_send_band_scoa,
 		.wait_user = lbp1120_wait_user,
 	},
-	.get_status = capt_get_xstatus_only,
-	.wait_ready = capt_wait_xready_only,
+	.get_status = capt_get_status,
+	.wait_ready = capt_wait_ready,
 };
 
 register_printer("LASER SHOT LBP-1120", lbp1120_ops.ops, EXPERIMENTAL); // NOW BROKEN
