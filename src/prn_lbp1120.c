@@ -55,54 +55,18 @@ static void lbp1120_wait_ready(const struct printer_ops_s *ops)
 	lops->wait_ready();
 }
 
-static void send_job_start(uint8_t fg, uint16_t page)
-{
-	uint8_t ml = 0x00; /* host name lenght */
-	uint8_t ul = 0x00; /* user name lenght */
-	uint8_t nl = 0x00; /* document name lenght */
-	time_t rawtime = time(NULL);
-	const struct tm *tm = localtime(&rawtime);
-	uint8_t buf[32 + 40 + ml + ul + nl];
-	uint8_t head[32] = {
-		0x00, 0x00, 0x00, 0x00, LO(page), HI(page), 0x00, 0x00,
-		ml, 0x00, ul, 0x00, nl, 0x00, 0x00, 0x00,
-		fg, 0x01, LO(job), HI(job),
-		/*-60 */ 0xC4, 0xFF,
-		/*-120*/ 0x88, 0xFF,
-		LO(tm->tm_year), HI(tm->tm_year), (uint8_t) tm->tm_mon, (uint8_t) tm->tm_mday,
-		(uint8_t) tm->tm_hour, (uint8_t) tm->tm_min, (uint8_t) tm->tm_sec,
-		0x01,
-	};
-	memcpy(buf, head, sizeof(head));
-	memset(buf + 32, 0, 40 + ml + ul + nl);
-	capt_sendrecv(CAPT_JOB_SETUP, buf, sizeof(buf), NULL, 0);
-}
 
 static void lbp1120_job_prologue(struct printer_state_s *state)
 {
 	(void) state;
-	uint8_t buf[8];
+	uint8_t buf[10];
 	size_t size;
 
 	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
-	sleep(1);
 	capt_init_status();
-	lbp1120_get_status(state->ops);
-	//capt_sendrecv(CAPT_START_0, NULL, 0, NULL, 0);
-	capt_send(CAPT_JOB_BEGIN, NULL, 0);
-	//job=WORD(buf[2], buf[3]);
-	lbp1120_get_status(state->ops);
-	capt_send(CAPT_CHKJOBSTAT, NULL, 0);
-	//lbp1120_get_status(state->ops);
-	capt_send(CAPT_START_3, NULL, 0);
-	capt_sendrecv(CAPT_UPLOAD_2, magicbuf_2, ARRAY_SIZE(magicbuf_2), NULL, 0);
-	lbp1120_get_status(state->ops);
-	capt_send(CAPT_NOP, NULL, 0);
-	capt_send(CAPT_CHKJOBSTAT, NULL, 0);
-	lbp1120_wait_ready(state->ops);
-	//send_job_start(1, 0);
-	//lbp1120_wait_ready(state->ops);
-}
+	capt_sendrecv(CAPT_CHKJOBSTAT, NULL, 0, NULL, 0);
+	capt_sendrecv(CAPT_JOB_BEGIN, NULL, 0, NULL, 0);
+}	
 static bool lbp1120_page_prologue(struct printer_state_s *state, const struct page_dims_s *dims)
 {
 	const struct capt_status_s *status;
@@ -160,17 +124,6 @@ static bool lbp1120_page_prologue(struct printer_state_s *state, const struct pa
 
 	(void) state;
 
-	lbp1120_get_status(state->ops);
-		//capt_sendrecv(CAPT_START_1, NULL, 0, NULL, 0);
-		//capt_sendrecv(CAPT_START_2, NULL, 0, NULL, 0);
-		//capt_sendrecv(CAPT_START_3, NULL, 0, NULL, 0);
-		lbp1120_get_status(state->ops);
-
-
-		//lbp1120_wait_ready(state->ops);
-		
-		lbp1120_wait_ready(state->ops);
-
 	while (1) {
 		if (! FLAG(lbp1120_get_status(state->ops), CAPT_FL_BUFFERFULL))
 			break;
@@ -178,10 +131,12 @@ static bool lbp1120_page_prologue(struct printer_state_s *state, const struct pa
 	}
 
 	capt_send(CAPT_SET_PARM_PAGE, pageparms, sizeof(pageparms));
+	lbp1120_get_status(state->ops);
+	capt_send(CAPT_NOP, NULL, 0);
 	capt_send(CAPT_SET_PARM_1, NULL, 0);
 	lbp1120_get_status(state->ops);
 	capt_send(CAPT_NOP, NULL, 0);
-	capt_send(CAPT_IEEE_IDENT, NULL, 0);
+	capt_send(CAPT_CHKJOBSTAT, NULL, 0);
 	//capt_multi_add(CAPT_SET_PARM_2, NULL, 0);
 	//capt_multi_send();
 
@@ -205,9 +160,9 @@ static bool lbp1120_page_epilogue(struct printer_state_s *state, const struct pa
 	//send_job_start(2, status->page_decoding);
 	lbp1120_wait_ready(state->ops);
 
-	uint8_t buf[2] = { LO(status->page_decoding), HI(status->page_decoding) };
-	capt_sendrecv(CAPT_FIRE, buf, 2, NULL, 0);
-	lbp1120_wait_ready(state->ops);
+	//uint8_t buf[2] = { LO(status->page_decoding), HI(status->page_decoding) };
+	//capt_sendrecv(CAPT_FIRE, buf, 2, NULL, 0);
+	//lbp1120_wait_ready(state->ops);
 
 	//send_job_start(6, status->page_decoding);
 
@@ -238,13 +193,21 @@ static void lbp1120_page_setup(struct printer_state_s *state,
 	dims->num_lines = dims->paper_height;
 	dims->line_size = dims->paper_width / 8;
 	dims->band_size = 70;
+
+	capt_sendrecv(CAPT_START_3, NULL, 0, NULL, 0);
+	capt_sendrecv(CAPT_UPLOAD_2, magicbuf_1, ARRAY_SIZE(magicbuf_1), NULL, 0);
+	lbp1120_get_status(state->ops);
+	capt_send(CAPT_NOP, NULL, 0);
+	capt_send(CAPT_CHKJOBSTAT, NULL, 0);
+	lbp1120_get_status(state->ops);
+
 }
 
 static void lbp1120_wait_user(struct printer_state_s *state)
 {
 	(void) state;
 
-	capt_sendrecv(CAPT_GPIO, blinkonbuf, ARRAY_SIZE(blinkonbuf), NULL, 0);
+	//capt_sendrecv(CAPT_GPIO, blinkonbuf, ARRAY_SIZE(blinkonbuf), NULL, 0);
 	lbp1120_wait_ready(state->ops);
 
 	while (1) {
@@ -260,7 +223,7 @@ static void lbp1120_wait_user(struct printer_state_s *state)
 		sleep(1);
 	}
 
-	capt_sendrecv(CAPT_GPIO, blinkoffbuf, ARRAY_SIZE(blinkoffbuf), NULL, 0);
+	//capt_sendrecv(CAPT_GPIO, blinkoffbuf, ARRAY_SIZE(blinkoffbuf), NULL, 0);
 	lbp1120_wait_ready(state->ops);
 }
 static void lbp1120_job_epilogue(struct printer_state_s *state)
